@@ -1,0 +1,52 @@
+version: '3.5'
+
+services:
+  redis:
+    container_name: redis
+    image: redis
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+    
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    depends_on:
+      - redis
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - 8081:8081
+
+  rq-dashboard:
+    container_name: rq-dashboard
+    hostname: rq-dashboard
+    image: eoranged/rq-dashboard
+    depends_on:
+      - redis
+    environment:
+    - RQ_DASHBOARD_REDIS_URL=redis://redis:6379
+    - RQ_DASHBOARD_USERNAME=rq
+    - RQ_DASHBOARD_PASSWORD=password
+    ports:
+      - 9181:9181
+ 
+  dns-crawler:
+    container_name: dns-crawler
+    build: https://gitlab.nic.cz/adam/dns-crawler/-/raw/master/Dockerfile
+    depends_on:
+      - redis
+    volumes:
+      - ./app_files:/app
+    entrypoint: ["/bin/bash", "-c", "dns-crawler-controller /app/list_dns_to_check.txt redis:6379 > /app/output.json"]
+
+  dns-crawler-worker:
+    container_name: dns-crawler-worker
+    build: https://gitlab.nic.cz/adam/dns-crawler/-/raw/master/Dockerfile
+    depends_on:
+      - redis
+      - dns-crawler
+    entrypoint: ["/bin/bash", "-c", "dns-crawler-workers 8 redis:6379"]
