@@ -2,4 +2,5 @@ config.py
 data/
 tmp/
 !data/preprocess_output/result.json
-!source_lists/*.txt
+!data/source_lists/*.txt
+
